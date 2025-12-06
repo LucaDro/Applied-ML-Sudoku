@@ -6,13 +6,15 @@ from sudoku_digitalisation.features.image_operations import save_image
 
 
 def load_sudoku_dataset(path=None, hugface=False) -> 'DatasetHandler':
+    """Loads the dataset either from huggingface or from a local save."""
     if hugface:
         dataset = load_dataset(path)
         return DatasetHandler(dataset=dataset)
 
-    path = path if path is not None else os.path.join(
-        "sudoku_digitalisation", "data", "datasets"
-        )
+    if path is None:
+        base_dir = os.path.dirname(__file__)
+        path = os.path.join(base_dir, '..', 'data', 'datasets')
+        print(path)
     raw_path = os.path.join(path, "raw")
     prepro_path = os.path.join(path, "preprocessed")
     digits_path = os.path.join(path, "digits")
@@ -39,11 +41,13 @@ class DatasetHandler:
             "preprocessed": preprocessed_dataset,
             "digits": digits_dataset
         }
-        self.save_path = save_path if save_path is not None else os.path.join(
-            "sudoku_digitalisation", "data", "datasets"
-            )
+        if save_path is None:
+            base_dir = os.path.dirname(__file__)
+            save_path = os.path.join(base_dir, '..', 'data', 'datasets')
+        self.save_path = save_path
 
     def save_dataset(self, type: str, path: str = None) -> None:
+        """Saves one dataset locally based on the specified type (raw, preprocessed, split into digits)."""
         if path is not None:
             self.save_path = path
         dataset = self.datasets[type]
@@ -51,23 +55,37 @@ class DatasetHandler:
                 dataset.save_to_disk(os.path.join(self.save_path, type))
 
     def save_all_datasets(self, path: str = None) -> None:
+        """Saves all types (raw, preprocessed, split into digits) of datasets locally."""
         if path is not None:
             self.save_path = path
         for name in self.datasets:
             self.save_dataset(name, path)
 
     def save_split_png(self, type: str, split: str) -> None:
+        """
+        Saves the images of a given type (raw, preprocessed, split into digits) of dataset
+        for a given split (test, train, validation).
+        """
         dataset = self.datasets[type]
         for idx, datapoint in enumerate(tqdm(dataset[split], desc=f"Saving {split} split as png")):
             filename = f"{split}_{idx:05}.png"
             save_image(datapoint["image"], os.path.join(type, split), filename)
 
     def save_dataset_png(self, type: str) -> None:
+        """
+        Saves the images of a given type (raw, preprocessed, split into digits) of dataset
+        for each split (test, train, validation).
+        """
         dataset = self.datasets[type]
         for split in dataset:
             self.save_split_png(type, split)
 
-    def show_image(self, type: str, split: str, index: int):
+    def show_image(self, type: str, split: str, index: int) -> None:
+        """
+        Shows an image at a given index,
+        of a given type (raw, preprocessed, split into digits) of dataset,
+        for a given split (test, train, validation).
+        """
         dataset = self.datasets[type]
         if dataset is None:
             raise RuntimeError(f"{type} dataset not loaded.")
